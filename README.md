@@ -5,90 +5,41 @@ It’s meant to replicate the official [Tiptap Simple Editor demo](https://tipta
 
 ---
 
-## 🚀 Quick Setup
+## 🚀 Quick Start
 
 ```bash
 git clone https://github.com/alejosamudio/tiptap-embed.git
 cd tiptap-embed
 npm install
+```
+
+### Run the editor locally
+
+Start Vite’s dev server and open the editor in your browser:
+
+```bash
 npm run dev
-# open http://localhost:5173
-⚠️ Current Issue
-The editor loads but UI styles (toolbar, buttons, dropdowns, etc.) are missing — it looks like the default bare-bones Tiptap editor rather than the full styled Simple Editor.
-This appears related to missing or unresolved SCSS imports from the Tiptap UI Components template.
+# Visit http://localhost:5173
+```
 
-🧠 What’s Already Been Done
-Installed Tiptap UI Components via CLI
-npx @tiptap/cli init simple-editor
+### Production build
 
-Configured alias @/* in jsconfig.json and vite.config.js
+Generate an optimized build that you can host or embed elsewhere:
 
-Imported SCSS files per docs:
+```bash
+npm run build
+```
 
-css
-Copy code
-@import './styles/_variables.scss';
-@import './styles/_keyframe-animations.scss';
-Installed sass as a dev dependency.
+To verify the build output locally you can spin up Vite’s preview server:
 
-Despite this, the toolbar and layout remain unstyled.
+```bash
+npm run preview
+```
 
-🧩 Project Structure Snapshot
-css
-Copy code
-src/
- ├─ components/
- │   ├─ simple-editor/
- │   ├─ tiptap-ui/
- │   └─ tiptap-templates/
- ├─ styles/
- │   ├─ _variables.scss
- │   ├─ _keyframe-animations.scss
- │   └─ index.css
- ├─ App.jsx
- ├─ main.jsx
- ├─ index.css
- └─ vite.config.js
-🧾 Possible Causes (to investigate)
-Missing index.scss import from tiptap-ui or tiptap-templates
+### Linting
 
-Wrong relative paths for style imports in main.jsx
+ESLint is configured for the project. Run it to catch issues before committing:
 
-Alias configuration not resolving correctly in Vite
-
-Version mismatch between UI Components and core Tiptap packages
-
-🧰 Environment
-OS: Windows 10 / 11
-
-Node: v20+
-
-Package Manager: npm
-
-Framework: Vite + React
-
-Tiptap UI Components: Installed via CLI (v2+)
-
-🧑‍💻 Steps for Reviewers / Codex
-Clone repo → git clone https://github.com/alejosamudio/tiptap-embed.git
-
-Install deps → npm install
-
-Run → npm run dev
-
-Check console/dev-tools for SCSS or path errors
-
-Inspect src/components/ for missing or misplaced index.scss
-
-Compare with Tiptap Style Guide
-
-🎯 Goal
-Achieve full parity with the official Tiptap Simple Editor demo:
-
-Toolbar with icons and dropdowns
-
-Working highlight / color pickers
-
-Proper theme styling and layout
-
-Once working, this editor will be embedded into a Bubble app via iframe for custom AI-powered writing experiences.
+```bash
+npm run lint
+```
