@@ -1,0 +1,43 @@
+@import './styles/_variables.scss';
+@import './styles/_keyframe-animations.scss';
+
+.editor-container {
+  max-width: 700px;
+  margin: 40px auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.menu-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.menu-bar button {
+  border: 1px solid #ccc;
+  background: #f8f8f8;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.menu-bar button:hover {
+  background: #f0f0f0;
+}
+
+.menu-bar button.is-active {
+  background: #333;
+  color: white;
+}
+
+.ProseMirror {
+  min-height: 300px;
+  outline: none;
+  line-height: 1.6;
+}
