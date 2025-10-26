@@ -11,20 +11,14 @@ export function ThemeToggle() {
   const [isDarkMode, setIsDarkMode] = React.useState(false)
 
   React.useEffect(() => {
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
-    const handleChange = () => setIsDarkMode(mediaQuery.matches)
-    mediaQuery.addEventListener("change", handleChange)
-    return () => mediaQuery.removeEventListener("change", handleChange);
+    if (typeof document === "undefined") return
+
+    document.documentElement.classList.remove("dark")
   }, [])
 
   React.useEffect(() => {
-    const initialDarkMode =
-      !!document.querySelector('meta[name="color-scheme"][content="dark"]') ||
-      window.matchMedia("(prefers-color-scheme: dark)").matches
-    setIsDarkMode(initialDarkMode)
-  }, [])
+    if (typeof document === "undefined") return
 
-  React.useEffect(() => {
     document.documentElement.classList.toggle("dark", isDarkMode)
   }, [isDarkMode])
 
