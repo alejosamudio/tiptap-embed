@@ -9,4 +9,12 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    host: true, // allow external connections
+    allowedHosts: [
+      '.ngrok-free.app',   // allow any ngrok tunnel
+      'localhost',
+    ],
+    port: 5173,
+  },
 })
