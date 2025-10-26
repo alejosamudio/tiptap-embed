@@ -2,16 +2,13 @@
 
 body {
   --tt-toolbar-height: 44px;
-  --tt-theme-text: var(--tt-gray-light-900);
-
-  .dark & {
-    --tt-theme-text: var(--tt-gray-dark-900);
-  }
+  --tt-theme-text: #111;
 }
 
 body {
   font-family: "Inter", sans-serif;
-  color: var(--tt-theme-text);
+  color: #111;
+  background-color: #fff;
   font-optical-sizing: auto;
   font-weight: 400;
   font-style: normal;
@@ -28,8 +25,8 @@ html,
 body,
 #root,
 #app {
-  height: 100%;
-  background-color: var(--tt-bg-color);
+  min-height: 100%;
+  background-color: #fff;
 }
 
 ::-webkit-scrollbar {
@@ -55,28 +52,50 @@ body,
 }
 
 .simple-editor-wrapper {
-  width: 100vw;
-  height: 100vh;
-  overflow: auto;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 1.5rem;
+  box-sizing: border-box;
+  background-color: #fff;
+  color: #111;
+  --tt-toolbar-bg-color: #fff;
+  --tt-toolbar-border-color: rgba(15, 22, 36, 0.05);
+}
+
+.simple-editor-container {
+  width: 100%;
+  max-width: 960px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  position: relative;
+  margin: 0 auto;
 }
 
 .simple-editor-content {
-  max-width: 648px;
   width: 100%;
-  margin: 0 auto;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  flex: 1;
 }
 
 .simple-editor-content .tiptap.ProseMirror.simple-editor {
-  flex: 1;
+  background-color: #fff;
+  color: #111;
   padding: 3rem 3rem 30vh;
+  box-sizing: border-box;
 }
 
 @media screen and (max-width: 480px) {
   .simple-editor-content .tiptap.ProseMirror.simple-editor {
     padding: 1rem 1.5rem 30vh;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .simple-editor-wrapper {
+    padding: 1rem;
+  }
+
+  .simple-editor-container {
+    gap: 1rem;
   }
 }
