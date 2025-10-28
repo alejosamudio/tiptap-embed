@@ -164,9 +164,38 @@ export function SimpleEditor() {
   const { height } = useWindowSize()
   const [mobileView, setMobileView] = React.useState("main")
   const toolbarRef = React.useRef(null)
+  const pendingContentRef = React.useRef(null)
+  const pendingShouldNotifyRef = React.useRef(false)
+
+  const postToParent = React.useCallback((message) => {
+    if (typeof window === "undefined") return
+
+    const target = window.parent
+
+    if (!target || target === window) return
+
+    target.postMessage(message, "*")
+  }, [])
+
+  const sendContentUpdate = React.useCallback(
+    (editorInstance) => {
+      if (!editorInstance) return
+
+      try {
+        const html = editorInstance.getHTML()
+
+        postToParent({
+          type: "CONTENT_UPDATE",
+          html: encodeURIComponent(html),
+        })
+      } catch (error) {
+        console.error("Failed to serialize editor content", error)
+      }
+    },
+    [postToParent],
+  )
 
   const editor = useEditor({
-    immediatelyRender: false,
     shouldRerenderOnTransaction: false,
     editorProps: {
       attributes: {
@@ -204,12 +233,102 @@ export function SimpleEditor() {
       }),
     ],
     content,
+    onCreate: ({ editor: editorInstance }) => {
+      postToParent({ type: "TIPTAP_READY" })
+
+      if (pendingContentRef.current != null) {
+        const nextContent = pendingContentRef.current
+        const shouldNotify = pendingShouldNotifyRef.current
+
+        pendingContentRef.current = null
+        pendingShouldNotifyRef.current = false
+
+        applyEditorContent(editorInstance, nextContent, {
+          notifyParent: shouldNotify,
+        })
+      } else {
+        sendContentUpdate(editorInstance)
+      }
+    },
+    onUpdate: ({ editor: editorInstance }) => {
+      sendContentUpdate(editorInstance)
+    },
   })
 
   const rect = useCursorVisibility({
     editor,
     overlayHeight: toolbarRef.current?.getBoundingClientRect().height ?? 0,
   })
+
+  const applyEditorContent = React.useCallback(
+    (editorInstance, html, { notifyParent = true } = {}) => {
+      if (!editorInstance) return
+
+      try {
+        editorInstance.commands.setContent(html, false)
+
+        if (notifyParent) {
+          sendContentUpdate(editorInstance)
+        }
+      } catch (error) {
+        console.error("Failed to apply editor content", error)
+      }
+    },
+    [sendContentUpdate],
+  )
+
+  React.useEffect(() => {
+    if (!editor || pendingContentRef.current == null) {
+      return
+    }
+
+    const nextContent = pendingContentRef.current
+    const shouldNotify = pendingShouldNotifyRef.current
+
+    pendingContentRef.current = null
+    pendingShouldNotifyRef.current = false
+
+    applyEditorContent(editor, nextContent, { notifyParent: shouldNotify })
+  }, [applyEditorContent, editor])
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return undefined
+
+    const handleMessage = (event) => {
+      const { data } = event
+
+      if (!data || typeof data !== "object") return
+
+      if (data.type === "SET_CONTENT") {
+        const encoded = typeof data.html === "string" ? data.html : ""
+        let nextContent = ""
+
+        try {
+          nextContent = decodeURIComponent(encoded)
+        } catch (error) {
+          console.error("Failed to decode incoming content", error)
+          return
+        }
+
+        if (editor) {
+          applyEditorContent(editor, nextContent)
+        } else {
+          pendingContentRef.current = nextContent
+          pendingShouldNotifyRef.current = true
+        }
+      }
+
+      if (data.type === "REQUEST_CONTENT" && editor) {
+        sendContentUpdate(editor)
+      }
+    }
+
+    window.addEventListener("message", handleMessage)
+
+    return () => {
+      window.removeEventListener("message", handleMessage)
+    }
+  }, [applyEditorContent, editor, sendContentUpdate])
 
   React.useEffect(() => {
     if (!isMobile && mobileView !== "main") {
@@ -220,28 +339,32 @@ export function SimpleEditor() {
   return (
     <div className="simple-editor-wrapper">
       <EditorContext.Provider value={{ editor }}>
-        <Toolbar
-          ref={toolbarRef}
-          style={{
-            ...(isMobile
-              ? {
-                  bottom: `calc(100% - ${height - rect.y}px)`,
-                }
-              : {}),
-          }}>
-          {mobileView === "main" ? (
-            <MainToolbarContent
-              onHighlighterClick={() => setMobileView("highlighter")}
-              onLinkClick={() => setMobileView("link")}
-              isMobile={isMobile} />
-          ) : (
-            <MobileToolbarContent
-              type={mobileView === "highlighter" ? "highlighter" : "link"}
-              onBack={() => setMobileView("main")} />
-          )}
-        </Toolbar>
+        <div className="simple-editor-container">
+          <Toolbar
+            ref={toolbarRef}
+            style={{
+              ...(isMobile
+                ? {
+                    bottom: `calc(100% - ${height - rect.y}px)`,
+                  }
+                : {}),
+            }}>
+            {mobileView === "main" ? (
+              <MainToolbarContent
+                onHighlighterClick={() => setMobileView("highlighter")}
+                onLinkClick={() => setMobileView("link")}
+                isMobile={isMobile} />
+            ) : (
+              <MobileToolbarContent
+                type={mobileView === "highlighter" ? "highlighter" : "link"}
+                onBack={() => setMobileView("main")} />
+            )}
+          </Toolbar>
 
-        <EditorContent editor={editor} role="presentation" className="simple-editor-content" />
+          <div className="simple-editor-content">
+            <EditorContent editor={editor} role="presentation" />
+          </div>
+        </div>
       </EditorContext.Provider>
     </div>
   );
