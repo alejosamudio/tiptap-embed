@@ -331,6 +331,59 @@ export function SimpleEditor() {
   }, [applyEditorContent, editor, sendContentUpdate])
 
   React.useEffect(() => {
+    if (!editor || pendingContentRef.current == null) {
+      return
+    }
+
+    const nextContent = pendingContentRef.current
+    const shouldNotify = pendingShouldNotifyRef.current
+
+    pendingContentRef.current = null
+    pendingShouldNotifyRef.current = false
+
+    applyEditorContent(editor, nextContent, { notifyParent: shouldNotify })
+  }, [applyEditorContent, editor])
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return undefined
+
+    const handleMessage = (event) => {
+      const { data } = event
+
+      if (!data || typeof data !== "object") return
+
+      if (data.type === "SET_CONTENT") {
+        const encoded = typeof data.html === "string" ? data.html : ""
+        let nextContent = ""
+
+        try {
+          nextContent = decodeURIComponent(encoded)
+        } catch (error) {
+          console.error("Failed to decode incoming content", error)
+          return
+        }
+
+        if (editor) {
+          applyEditorContent(editor, nextContent)
+        } else {
+          pendingContentRef.current = nextContent
+          pendingShouldNotifyRef.current = true
+        }
+      }
+
+      if (data.type === "REQUEST_CONTENT" && editor) {
+        sendContentUpdate(editor)
+      }
+    }
+
+    window.addEventListener("message", handleMessage)
+
+    return () => {
+      window.removeEventListener("message", handleMessage)
+    }
+  }, [applyEditorContent, editor, sendContentUpdate])
+
+  React.useEffect(() => {
     if (!isMobile && mobileView !== "main") {
       setMobileView("main")
     }
