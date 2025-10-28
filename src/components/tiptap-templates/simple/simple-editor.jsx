@@ -195,6 +195,65 @@ export function SimpleEditor() {
     [postToParent],
   )
 
+  const resolveContentPayload = React.useCallback((payload) => {
+    if (!payload) return null
+
+    if (typeof payload === "string") {
+      const trimmed = payload.trim()
+
+      if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+        try {
+          const parsed = JSON.parse(trimmed)
+
+          if (parsed && typeof parsed === "object") {
+            return { doc: parsed, html: null }
+          }
+        } catch (error) {
+          console.warn("Failed to parse JSON content, falling back to HTML", error)
+        }
+      }
+
+      return { doc: null, html: payload }
+    }
+
+    if (typeof payload === "object") {
+      if (payload.doc || payload.html) {
+        return {
+          doc: payload.doc ?? null,
+          html: payload.html ?? null,
+        }
+      }
+
+      return { doc: payload, html: null }
+    }
+
+    return null
+  }, [])
+
+  const applyEditorContent = React.useCallback(
+    (editorInstance, payload, { notifyParent = true } = {}) => {
+      if (!editorInstance) return
+
+      const resolved = resolveContentPayload(payload)
+
+      if (!resolved) return
+
+      const { doc, html } = resolved
+      const nextContent = doc ?? html ?? ""
+
+      try {
+        editorInstance.commands.setContent(nextContent, false)
+
+        if (notifyParent) {
+          sendContentUpdate(editorInstance)
+        }
+      } catch (error) {
+        console.error("Failed to apply editor content", error)
+      }
+    },
+    [resolveContentPayload, sendContentUpdate],
+  )
+
   const editor = useEditor({
     shouldRerenderOnTransaction: false,
     editorProps: {
@@ -368,6 +427,64 @@ export function SimpleEditor() {
         } else {
           pendingContentRef.current = nextContent
           pendingShouldNotifyRef.current = true
+        }
+      }
+
+      if (data.type === "REQUEST_CONTENT" && editor) {
+        sendContentUpdate(editor)
+      }
+    }
+
+    window.addEventListener("message", handleMessage)
+
+    return () => {
+      window.removeEventListener("message", handleMessage)
+    }
+  }, [applyEditorContent, editor, sendContentUpdate])
+
+  React.useEffect(() => {
+    if (!editor || pendingContentRef.current == null) {
+      return
+    }
+
+    const nextContent = pendingContentRef.current
+    const shouldNotify = pendingShouldNotifyRef.current
+
+    pendingContentRef.current = null
+    pendingShouldNotifyRef.current = false
+
+    applyEditorContent(editor, nextContent, { notifyParent: shouldNotify })
+  }, [applyEditorContent, editor])
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return undefined
+
+    const handleMessage = (event) => {
+      const { data } = event
+
+      if (!data || typeof data !== "object") return
+
+      if (data.type === "SET_CONTENT") {
+        const encoded = typeof data.html === "string" ? data.html : ""
+        const notifyParent = data.notify !== false
+        let nextContent = encoded
+
+        if (encoded) {
+          try {
+            nextContent = decodeURIComponent(encoded)
+          } catch (error) {
+            console.error("Failed to decode incoming content", error)
+            nextContent = encoded
+          }
+        } else if (data.doc) {
+          nextContent = data.doc
+        }
+
+        if (editor) {
+          applyEditorContent(editor, nextContent, { notifyParent })
+        } else {
+          pendingContentRef.current = nextContent
+          pendingShouldNotifyRef.current = notifyParent
         }
       }
 
