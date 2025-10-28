@@ -501,6 +501,64 @@ export function SimpleEditor() {
   }, [applyEditorContent, editor, sendContentUpdate])
 
   React.useEffect(() => {
+    if (!editor || pendingContentRef.current == null) {
+      return
+    }
+
+    const nextContent = pendingContentRef.current
+    const shouldNotify = pendingShouldNotifyRef.current
+
+    pendingContentRef.current = null
+    pendingShouldNotifyRef.current = false
+
+    applyIncomingContent(editor, nextContent, { notifyParent: shouldNotify })
+  }, [applyIncomingContent, editor])
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return undefined
+
+    const handleMessage = (event) => {
+      const { data } = event
+
+      if (!data || typeof data !== "object") return
+
+      if (data.type === "SET_CONTENT") {
+        const encoded = typeof data.html === "string" ? data.html : ""
+        const notifyParent = data.notify !== false
+        let nextContent = encoded
+
+        if (encoded) {
+          try {
+            nextContent = decodeURIComponent(encoded)
+          } catch (error) {
+            console.error("Failed to decode incoming content", error)
+            nextContent = encoded
+          }
+        } else if (data.doc) {
+          nextContent = data.doc
+        }
+
+        if (editor) {
+          applyIncomingContent(editor, nextContent, { notifyParent })
+        } else {
+          pendingContentRef.current = nextContent
+          pendingShouldNotifyRef.current = notifyParent
+        }
+      }
+
+      if (data.type === "REQUEST_CONTENT" && editor) {
+        sendContentUpdate(editor)
+      }
+    }
+
+    window.addEventListener("message", handleMessage)
+
+    return () => {
+      window.removeEventListener("message", handleMessage)
+    }
+  }, [applyIncomingContent, editor, sendContentUpdate])
+
+  React.useEffect(() => {
     if (!isMobile && mobileView !== "main") {
       setMobileView("main")
     }
